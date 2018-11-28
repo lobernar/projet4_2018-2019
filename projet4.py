@@ -6,9 +6,12 @@ Etudes: BA1 Info
 But: Le but est de créer une prison dans laquelle on peut enfermer des super villains. Il
 faut cependant faire attention que la sécurité soit assez élevée et qu'il ait assez de place dans
 la prison
-Entrées:
-Sprties:
+Entrées: la taille de la prison, les ailes ainsi que leurs niveaux de sécurité et le fichier contenant
+les criminels
+Sorties: le menu de la prison avec lequel il est possible d'effectuer plusieurs opérations
 """
+
+
 import random, pickle, sys
 
 
@@ -26,12 +29,11 @@ def build_prison():
             assert False
         prison = {}
         i = 2
-        num = 1
         d = {}
         while i < len(sys.argv) - 1:
-            if (sys.argv[i] not in gender) and (not int(sys.argv[i])):
+            if (sys.argv[i] not in gender) and (not int(sys.argv[i])) and int(sys.argv[i]) != 0:
                 assert False
-            if sys.argv[i] in gender:
+            elif sys.argv[i] in gender:
                 num = 0
                 int(sys.argv[i + 1])
                 gender.remove(sys.argv[i])
@@ -44,29 +46,26 @@ def build_prison():
             num += 1
             i += 1
     except Exception:
-        print("Votre prison n'est pas construite selon les règles ! \n"
-              "Veuillez relancer le programme avec une prison adéquate !")
+         print("Votre prison n'est pas construite selon les règles !\n"
+                 "Veuillez relancer le programme avec une prison adéquate !")
+         return False
     else:
-# for i in prison:... !!!!!!!!!!!!
         prison["taille"] = int(sys.argv[1])
         print("Votre prison sait accueillir", prison["taille"], "prisonniers.")
-        if "F" in prison:
-            secu = []
-            i = 1
-            while i <= len(prison["F"]):
-                secu.append(str(prison["F"][i]["sécurité"]))
-                i += 1
-            print("La prison possède une aile pour femmes, composée de", max(prison["F"]), "divison(s) \n"
-                  "de sécurité", ",".join(secu) + ".")
-        if "M" in prison:
-            secu = []
-            i = 1
-            while i <= len(prison["M"]):
-                secu.append(str(prison["M"][i]["sécurité"]))
-                i += 1
-            print("La prison possède une aile pour hommes, composée de", max(prison["M"]), "division(s) \n"
-                  "de sécurité", ",".join(secu) + ".")
-        return prison
+        for gender in prison:
+            if gender != "taille":
+                secu = []
+                i = 1
+                while i <= len(prison[gender]):
+                    secu.append(str(prison[gender][i]["sécurité"]))
+                    i += 1
+                if gender == "M":
+                    print("La prison possède une aile pour hommes, composée de", max(prison[gender]), "divison(s) \n"
+                            "de sécurité", ",".join(secu) + ".")
+                elif gender == "F":
+                    print("La prison possède une aile pour femmes, composée de", max(prison[gender]), "divison(s) \n"
+                        "de sécurité", ",".join(secu) + ".")
+    return prison
 
 
 def print_villain(villain):
@@ -78,10 +77,50 @@ def print_villain(villain):
     print("     Crimes commis : \n        " + "\n        ".join(crimes))
 
 
+def taille(prison):
+    """Cette fonction vérifie si la prison possède la taille appropriée pour accueillir les criminels"""
+
+    with open(sys.argv[-1], "rb") as f:
+        pickle_file = pickle.load(f)
+        taille = 0
+        for gender in pickle_file:
+            for j in pickle_file[gender]:
+                taille += 1
+        print(taille)
+        return taille <= prison["taille"]
+
+
+def fill_prison(prison):
+    """Cette fonction ajoute les prisonniers du fichier à la prison construite"""
+
+    with open(sys.argv[-1], "rb") as f:
+        pickle_file = pickle.load(f)
+        print("Maintenant, remplissons la prison de prisonniers...")
+        for gender in pickle_file:
+            if gender not in prison:
+                print("Votre prison ne possède pas la division du sexe approprié pour certains de vos \n"
+                      "prisonniers ! \nVeuillez construire une prison adéquate pour votre population carcérale !")
+                res = False
+            elif not taille(prison):
+                print("Vous possédez trop de prisonniers pour la taille de votre prison ! \n"
+                      "Débarassez-vous de quelques-uns de vos prisonniers avant de revenir, on ne dira rien, promis."
+                      " Ils ne manqueront à peronne... \nOu construisez une prison plus grande !")
+                res = False
+            else:
+                i = 0
+                res = True
+                while i < len(pickle_file[gender]) and res:
+                    res = put_in_jail(prison, pickle_file[gender][i], gender)
+                    i += 1
+                if res is False:
+                    print("Vous êtes priés de construire une prison plus protégée si vous ne voulez pas"
+                            "qu'ils s'enfuient. Encore.")
+                    return res
+            return res
+
 
 def put_in_jail(prison, villain, gender):
     """Cette fonction ajoute à la prison le criminel donné en argument"""
-
     secu = {"M": [], "F": []}
     for i in prison:
         if i != "taille":
@@ -106,35 +145,6 @@ def put_in_jail(prison, villain, gender):
                 prison[gender][key]["prisonniers"].append(villain)
     return res
 
-
-def fill_prison(prison):
-    """Cette fonction ajoute les prisonniers du fichier à la prison construite"""
-
-    with open(sys.argv[-1], "rb") as f:
-        pickle_file = pickle.load(f)
-        print("Maintenant, remplissons la prison de prisonniers...")
-        res = 0
-        for gender in pickle_file:
-            res += len(pickle_file[gender])
-            if gender not in prison:
-                print("Votre prison ne possède pas la division du sexe approprié pour certains de vos \n"
-                      "prisonniers ! \nVeuillez construire une prison adéquate pour votre population carcérale !")
-                break
-            elif res > prison["taille"]:
-                print("Vous possédez trop de prisonniers pour la taille de votre prison ! \n"
-                      "Débarassez-vous de quelques-uns de vos prisonniers avant de revenir, on ne dira rien, promis."
-                      " Ils ne manqueront à peronne... \nOu construisez une prison plus grande !")
-                break
-            else:
-                i = 0
-                while i < len(pickle_file[gender]):
-                    res = put_in_jail(prison, pickle_file[gender][i], gender)
-                    i += 1
-                    if res == False:
-                        print("Vous êtes priés de construire une prison plus protégée si vous ne voulez pas"
-                              "qu'ils s'enfuient. Encore.")
-                        i = len(pickle_file[gender])
-    return res
 
 def add_villain(prison):
     """Cette fonction permer à l'utilisateur d'ajouter un prisonnier dans sa prison"""
@@ -173,6 +183,7 @@ def add_villain(prison):
     new_pris.update({"nom": nom, "crimes": lst_crimes, "univers": univers, "ID": ID, "danger": danger})
     put_in_jail(prison, new_pris, genre)
 # taille depassée ----> random flee!!!!!!!!!!!!
+    print(taille(prison))
     return new_pris
 
 
@@ -217,16 +228,22 @@ def filter_prison(prison):
         print("Veuillez entrer l'univers dont vous cherchez le vilain.")
         univ = input(">")
         compteur = 0
+        prisonniers = []
         for gender in prison:
             if gender != "taille":
                 for i in prison[gender]:
                     for j in range(len(prison[gender][i]["prisonniers"])):
                         if prison[gender][i]["prisonniers"][j]["univers"] == univ:
-                            print_villain(prison[gender][i]["prisonniers"][j])
+                            prisonniers.append(prison[gender][i]["prisonniers"][j])
                             compteur += 1
-# print number of villains in this universe!!!!!!!!!!
         if compteur == 0:
             print("Nous n'avons trouvé aucun super vilain de cet univers !")
+        else:
+            print("Vous avez", compteur, "prisonniers de cet univers")
+            i = 0
+            while i < len(prisonniers):
+                print_villain(prisonniers[i])
+                i += 1
 
     elif choice == 3: # l'utilisateur souhaite filtrer la prison selon le niveau de danger
         print("Veuillez entrer le niveau de danger minimum du super vilain.")
@@ -241,73 +258,79 @@ def filter_prison(prison):
                 print("Le niveau de danger doit être un nombre entier!")
                 niv_danger = input(">")
         compteur = 0
+        prisonniers_danger = []
         for gender in prison:
             if gender != "taille":
                 for i in prison[gender]:
                     for j in range(len(prison[gender][i]["prisonniers"])):
                         if prison[gender][i]["prisonniers"][j]["danger"] >= niv_danger:
-                            print_villain(prison[gender][i]["prisonniers"][j])
+                            prisonniers_danger.append(prison[gender][i]["prisonniers"][j])
                             compteur += 1
-# print number of criminals with this danger!!!!!!!!!!!!!!!!
         if compteur == 0:
             print("Nous n'avons trouvé aucun super vilain avec ce niveau de danger ! \n"
                   "(J'imagine que c'est une bonne chose...)")
+        else:
+            print("Vous avez", compteur, "prisonniers qui ont un niveau de danger supérieur ou égal à", niv_danger)
+            i = 0
+            while i < len(prisonniers_danger):
+                print_villain(prisonniers_danger[1])
+                i += 1
     elif choice == 4:
-        print("Toute la prison")
-        print(prison)
+            print("Toute la prison")
+            print(prison)
 
 
 def menu():
     prison = build_prison()
-    fill = fill_prison(prison)
-    if fill is True:
-        print("Ok, votre prison a su être construite et est maintenant remplie de prisonniers !")
-        cond = True
-        while cond:
+    if prison is not False:
+        fill = fill_prison(prison)
+        if fill is True:
+            print("Ok, votre prison a su être construite et est maintenant remplie de prisonniers !")
+            cond = True
+            while cond:
 
-            print("Comment pouvons-nous vous aider ? Voulez-vous :\n"
-                  "1) Consulter les statistiques de notre prison ?\n"
-                  "2) Faire disparaître un Super Vilain dans notre prison ?\n"
-                  "3) Sauvegarder les prisonniers dans un fichier ?\n"
-                  "4) Quitter notre programme ?")
-            choice = input(">")
-            ok = True
-            while ok:
-                try:
-                    int(choice)
-                    choice = int(choice)
-                    if choice <= 4:
-                        ok = False
-                    else:
-                        raise
-                except Exception:
-                    print("Veuillez choisir un nobre entier !")
-                    choice = input(">")
-            if choice == 1:
-                filter_prison(prison)
-            elif choice == 2:
-                pass
-                #add_villain(prison)
-            elif choice == 3:
-                with open("liste_prisonniers.pkl", "wb") as f:
-                    pickle.dump(prison, f)
-            elif choice == 4:
-                print("Merci d'avoir utilisé notre programme !\n"
-                  "Nous allons nous efforcer de garder les super vilains enfermés d'ici votre "
-                  "prochaine visite.\n"
-                  "En cas de problèmes, n'hésitez pas à consulter notre programme d'annuaire de "
-                  "super-hérosTM !")
-                cond = False
+                print("Comment pouvons-nous vous aider ? Voulez-vous :\n"
+                    "1) Consulter les statistiques de notre prison ?\n"
+                    "2) Ajouter un Super Vilain à notre prison ?\n"
+                    "3) Sauvegarder les prisonniers dans un fichier ?\n"
+                    "4) Quitter notre programme ?")
+                choice = input(">")
+                ok = True
+                while ok:
+                    try:
+                        int(choice)
+                        choice = int(choice)
+                        if choice <= 4:
+                            ok = False
+                        else:
+                            raise
+                    except Exception:
+                        print("Veuillez choisir un nobre entier !")
+                        choice = input(">")
+                if choice == 1:
+                    filter_prison(prison)
+                elif choice == 2:
+                    add_villain(prison)
+                elif choice == 3:
+                    with open("liste_prisonniers.pkl", "wb") as f:
+                        pickle.dump(prison, f)
+                elif choice == 4:
+                    print("Merci d'avoir utilisé notre programme !\n"
+                      "Nous allons nous efforcer de garder les super vilains enfermés d'ici votre "
+                      "prochaine visite.\n"
+                      "En cas de problèmes, n'hésitez pas à consulter notre programme d'annuaire de "
+                      "super-hérosTM !")
+                    cond = False
 
-        return choice
-
-
+            return choice
+prison = build_prison()
+print(taille(prison))
 menu_choice = menu()
 
 
 
 """
 comments!!!!!!!!!!!!!!!!
-docstring debut!!!!!!
 test si taille de prison est ok
+taille too small!!!!!!!!!!
 """
