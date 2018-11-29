@@ -64,7 +64,6 @@ def build_prison():
                 elif gender == "F":
                     print("La prison possède une aile pour femmes, composée de", max(prison[gender]), "divison(s) \n"
                         "de sécurité", ",".join(secu) + ".")
-    print(prison)
     return prison
 
 
@@ -157,13 +156,16 @@ def lst_prisonniers(prison):
     return lst
 
 
-def access_prison(prison, s):
-    lst = []
+def access_prison(prison, value, search):
+    res = False
+    lst = [res]
     for gender in prison:
         if gender != "taille":
             for i in prison[gender]:
                 for j in range(len(prison[gender][i]["prisonniers"])):
-                    lst.append(prison[gender][i]["prisonniers"][j][s])
+                    if prison[gender][i]["prisonniers"][j][value] == search:
+                        res = True
+                        lst = [gender, i, j, res]
     return lst
 
 
@@ -172,8 +174,10 @@ def add_villain(prison):
 
     new_pris = {}
     nom = input("Quel est le nom du prisonnier à ajouter à la prison ? \n>")
-    while nom in access_prison(prison, "nom"):
+    a = access_prison(prison, "nom", nom)
+    while a[-1]:
         nom = input("Ce prisonnier existe déjà \n>")
+        a = access_prison(prison, "nom", nom)
     genre = input("Quel est son genre ?")
     while genre != "M" and genre != "F":
         print("Vous devez choisir homme ou femme (M ou F) !")
@@ -202,8 +206,10 @@ def add_villain(prison):
     lst_id = []
     ID = [lst_id.append(str(random.randint(0, 6))) for i in range(6)]
     ID = int("".join(lst_id))
-    while ID in access_prison(prison, "ID"):
+    a = access_prison(prison, "ID", ID)
+    while a[-1]:
         ID = [lst_id.append(str(random.randint(0, 6))) for i in range(6)]
+        a = access_prison(prison, "ID", ID)
     ID = int("".join(lst_id))
     new_pris.update({"nom": nom, "crimes": lst_crimes, "univers": univers, "ID": ID, "danger": danger})
     put_in_jail(prison, new_pris, genre)
@@ -212,14 +218,13 @@ def add_villain(prison):
               "réussi à s'échapper dans la confusion !")
         prisonniers = lst_prisonniers(prison)
         random_flee = random.randint(0, len(prisonniers) - 1)
-        for gender in prison:
-            if gender != "taille":
-                for i in prison[gender]:
-                    for j in range(len(prison[gender][i]["prisonniers"]) - 1):
-                        if prison[gender][i]["prisonniers"][j]["nom"] == str(prisonniers[random_flee]):
-                            print("Le/la prisonnier/ère", prison[gender][i]["prisonniers"][j].pop("nom"),
-                                  "s'est enfui(e) !")
-                            del prison[gender][i]["prisonniers"][j]
+        while str(prisonniers[random_flee]) == new_pris["nom"]:
+            random_flee = random.randint(0, len(prisonniers) - 1)
+        a = access_prison(prison, "nom", str(prisonniers[random_flee]))
+        if a[-1]:
+            print("Le/la prisonnier/ère", prison[a[0]][a[1]]["prisonniers"][a[2]].pop("nom"),
+                  "s'est enfui(e) !")
+            del prison[a[0]][a[1]]["prisonniers"][a[2]]
     return new_pris
 
 
@@ -263,7 +268,6 @@ def filter_prison(prison):
     elif choice == 2: # l'utilisateur souhaite filtrer la prison en fonction de l'univers
         print("Veuillez entrer l'univers dont vous cherchez le vilain.")
         univ = input(">")
-        compteur = 0
         prisonniers = []
         for gender in prison:
             if gender != "taille":
@@ -271,11 +275,10 @@ def filter_prison(prison):
                     for j in range(len(prison[gender][i]["prisonniers"])):
                         if prison[gender][i]["prisonniers"][j]["univers"] == univ:
                             prisonniers.append(prison[gender][i]["prisonniers"][j])
-                            compteur += 1
-        if compteur == 0:
+        if len(prisonniers) == 0:
             print("Nous n'avons trouvé aucun super vilain de cet univers !")
         else:
-            print("Vous avez", compteur, "prisonniers de cet univers")
+            print("Vous avez", len(prisonniers), "prisonniers de cet univers")
             i = 0
             while i < len(prisonniers):
                 print_villain(prisonniers[i])
@@ -315,11 +318,8 @@ def filter_prison(prison):
             print("Toute la prison")
             print(prison)
 
-
 def menu():
     prison = build_prison()
-
-
     if prison is not False:
         fill = fill_prison(prison)
         if fill is True:
