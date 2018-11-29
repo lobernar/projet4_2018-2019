@@ -25,26 +25,25 @@ def build_prison():
         f = open(sys.argv[-1])
         int(sys.argv[1])
         gender = ["M", "F"]
-        if sys.argv[2] not in gender:
-            assert False
+        if sys.argv[2] not in gender or int(sys.argv[1]) <= 0:
+            raise
         prison = {}
         i = 2
-        d = {}
+        aile = 1
         while i < len(sys.argv) - 1:
-            if (sys.argv[i] not in gender) and (not int(sys.argv[i])) and int(sys.argv[i]) != 0:
-                assert False
-            elif sys.argv[i] in gender:
-                num = 0
-                int(sys.argv[i + 1])
+            if sys.argv[i] in gender:
+                selected_gender = sys.argv[i]
                 gender.remove(sys.argv[i])
-                gender1 = sys.argv[i]
-                d = {}
-            else:
-                detail = {"prisonniers": [], "sécurité": int(sys.argv[i])}
-                d[num] = detail
-                prison[gender1] = d
-            num += 1
+                int(sys.argv[i + 1])
+                if int(sys.argv[i + 1]) < 0:
+                    raise
+                aile = 1
+                prison[selected_gender] = {aile:{}}
+            elif int(sys.argv[i]):
+                prison[selected_gender][aile] = {"prisonniers": [], "sécurité": int(sys.argv[i])}
+                aile += 1
             i += 1
+
     except Exception:
          print("Votre prison n'est pas construite selon les règles !\n"
                  "Veuillez relancer le programme avec une prison adéquate !")
@@ -65,6 +64,7 @@ def build_prison():
                 elif gender == "F":
                     print("La prison possède une aile pour femmes, composée de", max(prison[gender]), "divison(s) \n"
                         "de sécurité", ",".join(secu) + ".")
+    print(prison)
     return prison
 
 
@@ -86,7 +86,6 @@ def taille(prison):
         for gender in pickle_file:
             for j in pickle_file[gender]:
                 taille += 1
-        print(taille)
         return taille <= prison["taille"]
 
 
@@ -96,19 +95,21 @@ def fill_prison(prison):
     with open(sys.argv[-1], "rb") as f:
         pickle_file = pickle.load(f)
         print("Maintenant, remplissons la prison de prisonniers...")
+        res = True
         for gender in pickle_file:
             if gender not in prison:
                 print("Votre prison ne possède pas la division du sexe approprié pour certains de vos \n"
                       "prisonniers ! \nVeuillez construire une prison adéquate pour votre population carcérale !")
                 res = False
+                break
             elif not taille(prison):
                 print("Vous possédez trop de prisonniers pour la taille de votre prison ! \n"
                       "Débarassez-vous de quelques-uns de vos prisonniers avant de revenir, on ne dira rien, promis."
                       " Ils ne manqueront à peronne... \nOu construisez une prison plus grande !")
                 res = False
+                break
             else:
                 i = 0
-                res = True
                 while i < len(pickle_file[gender]) and res:
                     res = put_in_jail(prison, pickle_file[gender][i], gender)
                     i += 1
@@ -116,7 +117,7 @@ def fill_prison(prison):
                     print("Vous êtes priés de construire une prison plus protégée si vous ne voulez pas"
                             "qu'ils s'enfuient. Encore.")
                     return res
-            return res
+        return res
 
 
 def put_in_jail(prison, villain, gender):
@@ -146,14 +147,33 @@ def put_in_jail(prison, villain, gender):
     return res
 
 
+def lst_prisonniers(prison):
+    lst = []
+    for gender in prison:
+        if gender != "taille":
+            for i in prison[gender]:
+                for j in range(len(prison[gender][i]["prisonniers"])):
+                    lst.append(prison[gender][i]["prisonniers"][j]["nom"])
+    return lst
+
+
+def access_prison(prison, s):
+    lst = []
+    for gender in prison:
+        if gender != "taille":
+            for i in prison[gender]:
+                for j in range(len(prison[gender][i]["prisonniers"])):
+                    lst.append(prison[gender][i]["prisonniers"][j][s])
+    return lst
+
+
 def add_villain(prison):
     """Cette fonction permer à l'utilisateur d'ajouter un prisonnier dans sa prison"""
 
     new_pris = {}
     nom = input("Quel est le nom du prisonnier à ajouter à la prison ? \n>")
-    while type(nom) != str:
-        print("Quel est le nom du prisonnier à ajouter à la prison ?")
-        nom = input(">")
+    while nom in access_prison(prison, "nom"):
+        nom = input("Ce prisonnier existe déjà \n>")
     genre = input("Quel est son genre ?")
     while genre != "M" and genre != "F":
         print("Vous devez choisir homme ou femme (M ou F) !")
@@ -173,17 +193,33 @@ def add_villain(prison):
     crimes = input("Quel(s) crime(s) a-t-il/elle commis ? Entrez-les l'un après l'autre en appuyant sur "
                    "Enter après chaque entrée. Entrez 'Fini' lorsque vous avez terminé d'encoder. \n>")
     while crimes != "Fini":
-        lst_crimes.append(crimes)
-        crimes = input(">")
+        while crimes == "":
+            print("Entrez des crimes valables")
+            crimes = input(">")
+        if crimes != "Fini":
+            lst_crimes.append(crimes)
+            crimes = input(">")
     lst_id = []
-    for i in range(1, 7):
-        lst_id.append(str(random.randint(0, 6)))
-# same ID as other prisoner
+    ID = [lst_id.append(str(random.randint(0, 6))) for i in range(6)]
+    ID = int("".join(lst_id))
+    while ID in access_prison(prison, "ID"):
+        ID = [lst_id.append(str(random.randint(0, 6))) for i in range(6)]
     ID = int("".join(lst_id))
     new_pris.update({"nom": nom, "crimes": lst_crimes, "univers": univers, "ID": ID, "danger": danger})
     put_in_jail(prison, new_pris, genre)
-# taille depassée ----> random flee!!!!!!!!!!!!
-    print(taille(prison))
+    if len(lst_prisonniers(prison)) > prison["taille"]:
+        print("Votre prison possède trop de prisonniers ! Un de vos prisonniers a "
+              "réussi à s'échapper dans la confusion !")
+        prisonniers = lst_prisonniers(prison)
+        random_flee = random.randint(0, len(prisonniers) - 1)
+        for gender in prison:
+            if gender != "taille":
+                for i in prison[gender]:
+                    for j in range(len(prison[gender][i]["prisonniers"]) - 1):
+                        if prison[gender][i]["prisonniers"][j]["nom"] == str(prisonniers[random_flee]):
+                            print("Le/la prisonnier/ère", prison[gender][i]["prisonniers"][j].pop("nom"),
+                                  "s'est enfui(e) !")
+                            del prison[gender][i]["prisonniers"][j]
     return new_pris
 
 
@@ -273,7 +309,7 @@ def filter_prison(prison):
             print("Vous avez", compteur, "prisonniers qui ont un niveau de danger supérieur ou égal à", niv_danger)
             i = 0
             while i < len(prisonniers_danger):
-                print_villain(prisonniers_danger[1])
+                print_villain(prisonniers_danger[i])
                 i += 1
     elif choice == 4:
             print("Toute la prison")
@@ -282,6 +318,8 @@ def filter_prison(prison):
 
 def menu():
     prison = build_prison()
+
+
     if prison is not False:
         fill = fill_prison(prison)
         if fill is True:
@@ -322,9 +360,7 @@ def menu():
                       "super-hérosTM !")
                     cond = False
 
-            return choice
-prison = build_prison()
-print(taille(prison))
+
 menu_choice = menu()
 
 
@@ -333,4 +369,5 @@ menu_choice = menu()
 comments!!!!!!!!!!!!!!!!
 test si taille de prison est ok
 taille too small!!!!!!!!!!
+function for try and except 
 """
